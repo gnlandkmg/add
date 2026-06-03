@@ -37,10 +37,20 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
-          request_pty: true
           script: |
-            pkill -f 'java -jar' || true
-            sleep 2
-            nohup java -jar ~/app/*.jar > ~/app/app.log 2>&1 &
-            disown
+            sudo tee /etc/systemd/system/app.service > /dev/null <<EOF
+            [Unit]
+            Description=Spring Boot App
+
+            [Service]
+            ExecStart=/usr/bin/java -jar /home/$USER/app/*.jar
+            Restart=always
+            User=$USER
+
+            [Install]
+            WantedBy=multi-user.target
+            EOF
+            sudo systemctl daemon-reload
+            sudo systemctl restart app
+            sudo systemctl enable app
             echo "배포 완료!"
